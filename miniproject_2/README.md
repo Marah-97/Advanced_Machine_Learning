@@ -21,7 +21,7 @@ Trains a VAE with a 2D latent space on 2048 MNIST images (digits 0, 1, 2) for 60
 Results are saved to the experiment folder.
 
 ```bash
-python ensemble_vae_partA.py train \
+python vae_geo.py train \
     --experiment-folder exp_run1 \
     --epochs-per-decoder 60 \
     --device cuda
@@ -34,7 +34,7 @@ Loads the trained model, encodes the test set, picks 25 random point pairs,
 computes geodesics by minimizing the discrete curve energy, and saves the results.
 
 ```bash
-python ensemble_vae_partA.py geodesics \
+python vae_geo.py geodesics \
     --experiment-folder exp_run1 \
     --num-curves 25 \
     --num-t 20 \
@@ -53,7 +53,7 @@ This saves:
 Edit plotting options (e.g. title, endpoints) and replot instantly from saved data.
 
 ```bash
-python ensemble_vae_partA.py plot \
+python vae_geo.py plot \
     --experiment-folder exp_run1 \
     --experiment-folder-2 exp_run2 \
     --device cuda
@@ -66,7 +66,7 @@ side by side — used for the report Figure 1.
 
 ### 4. Evaluate ELBO on test set
 ```bash
-python ensemble_vae_partA.py eval \
+python vae_geo.py eval \
     --experiment-folder exp_run1 \
     --device cuda
 ```
@@ -75,7 +75,7 @@ python ensemble_vae_partA.py eval \
 
 ### 5. Sample from the model
 ```bash
-python ensemble_vae_partA.py sample \
+python vae_geo.py sample \
     --experiment-folder exp_run1 \
     --samples samples.png \
     --device cuda
@@ -90,15 +90,15 @@ for two independent runs using the same random seed for point pair selection:
 
 ```bash
 # Run 1
-python ensemble_vae_partA.py train --experiment-folder exp_run1 --epochs-per-decoder 60 --device cuda
-python ensemble_vae_partA.py geodesics --experiment-folder exp_run1 --num-curves 25 --num-t 20 --geodesic-steps 1000 --geodesic-lr 5e-3 --device cuda
+python vae_geo.py train --experiment-folder exp_run1 --epochs-per-decoder 60 --device cuda
+python vae_geo.py geodesics --experiment-folder exp_run1 --num-curves 25 --num-t 20 --geodesic-steps 1000 --geodesic-lr 5e-3 --device cuda
 
 # Run 2
-python ensemble_vae_partA.py train --experiment-folder exp_run2 --epochs-per-decoder 60 --device cuda
-python ensemble_vae_partA.py geodesics --experiment-folder exp_run2 --num-curves 25 --num-t 20 --geodesic-steps 1000 --geodesic-lr 5e-3 --device cuda
+python vae_geo.py train --experiment-folder exp_run2 --epochs-per-decoder 60 --device cuda
+python vae_geo.py geodesics --experiment-folder exp_run2 --num-curves 25 --num-t 20 --geodesic-steps 1000 --geodesic-lr 5e-3 --device cuda
 
 # Generate two-panel plot
-python ensemble_vae_partA.py plot --experiment-folder exp_run1 --experiment-folder-2 exp_run2 --device cuda
+python vae_geo.py plot --experiment-folder exp_run1 --experiment-folder-2 exp_run2 --device cuda
 ```
 
 ---
