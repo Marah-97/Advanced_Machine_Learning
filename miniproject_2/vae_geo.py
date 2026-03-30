@@ -59,7 +59,6 @@ class GaussianEncoder(nn.Module):
         mean, std = torch.chunk(self.encoder_net(x), 2, dim=-1)
         return td.Independent(td.Normal(loc=mean, scale=torch.exp(std)), 1)
 
-
 class GaussianDecoder(nn.Module):
     def __init__(self, decoder_net):
         """
@@ -76,6 +75,19 @@ class GaussianDecoder(nn.Module):
     def forward(self, z):
         means = self.decoder_net(z)
         return td.Independent(td.Normal(loc=means, scale=1e-1), 3)
+    
+class EnsembleGaussianDecoder(nn.Module):
+    def __init__(self, decoder_net):
+        super().__init__()
+        self.decoders = nn.ModuleList(decoder_net)
+
+    def member_outputs(self, z):
+        return [decoder(z) for decoder in self.decoders]
+
+    def forward(self, z):
+        outs = self.member_outputs(z)
+        mean_out = torch.stack(outs, dim=0).mean(dim=0)
+        return td.Independent(td.Normal(loc=mean_out, scale=1e-1), 3)
 
 
 class VAE(nn.Module):
@@ -308,7 +320,7 @@ if __name__ == "__main__":
         "mode",
         type=str,
         default="train",
-        choices=["train", "sample", "eval", "geodesics", "plot"],
+        choices=["train", "train_b", "sample", "eval", "geodesics", "plot"],
         help="what to do when running the script (default: %(default)s)",
     )
     parser.add_argument("--experiment-folder", type=str, default="experiment")
@@ -408,6 +420,24 @@ if __name__ == "__main__":
         train(model, optimizer, mnist_train_loader, args.epochs_per_decoder, device)
         torch.save(model.state_dict(), f"{args.experiment_folder}/model.pt")
         print(f"Model saved to {args.experiment_folder}/model.pt")
+    
+    elif args.mode == "train_b":
+        reruns = 10
+        decoders_amount = 3
+        os.makedirs(args.experiment_folder, exist_ok=True)
+        for num_decorders in [1,2,3]:
+            for r in range(reruns):
+                decorders = [new_decoder() for _ in range(num_decorders)]
+                model = VAE(
+                    prior=GaussianPrior(M),
+                    decoder=EnsembleGaussianDecoder(decorders),
+                    encoder=GaussianEncoder(new_encoder()),
+                ).to(device)
+                optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+                train(model, optimizer, mnist_train_loader, args.epochs_per_decoder, device)
+                torch.save(model.state_dict(),
+                        f"{args.experiment_folder}/model_run_{num_decorders}_{r}.pt")
+            print(f"All models saved to {args.experiment_folder}/model_runX.pt")
 
     elif args.mode == "sample":
         model = VAE(
