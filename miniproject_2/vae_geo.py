@@ -690,7 +690,7 @@ if __name__ == "__main__":
 
     elif args.mode == "calculate_CoV":
         for l in range(3):
-            for i in range(10):
+            for r in range(10):
                 decorders = [GaussianDecoder(new_decoder()) for _ in range(args.num_decoders)]
                 model = EnsampleVAE(
                     GaussianPrior(M),
@@ -751,8 +751,8 @@ if __name__ == "__main__":
                     "all_z": all_z,
                     "all_y": all_y,
                     "euclidean_distance": euclidean_distance,
-                }, f"{args.experiment_folder}/geodesics_data_{l+1}_{i}.pt")
-                print(f"Geodesic data saved to {args.experiment_folder}/geodesics_data_{l+1}_{i}.pt")
+                }, f"{args.experiment_folder}/geodesics_data_{l+1}_{r}.pt")
+                print(f"Geodesic data saved to {args.experiment_folder}/geodesics_data_{l+1}_{r}.pt")
 
             
                     
