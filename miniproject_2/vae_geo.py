@@ -689,15 +689,15 @@ if __name__ == "__main__":
         #)
 
     elif args.mode == "calculate_CoV":
-        for l in range(3):
+        for l in range(1,3):
             for r in range(10):
-                decorders = [GaussianDecoder(new_decoder()) for _ in range(args.num_decoders)]
+                decorders = [GaussianDecoder(new_decoder()) for _ in range(l+1)]
                 model = EnsampleVAE(
                     GaussianPrior(M),
                     decorders,
                     GaussianEncoder(new_encoder()),
                 ).to(device)
-                model.load_state_dict(torch.load(f"{args.experiment_folder}/model_run_{l+1}_{i}.pt",
+                model.load_state_dict(torch.load(f"{args.experiment_folder}/model_run_{l+1}_{r}.pt",
                                                 map_location=device))
                 model.eval()
                 decoders = model.decoders
@@ -742,12 +742,13 @@ if __name__ == "__main__":
                         device=device,
                     )
                     geodesics.append(curve.cpu())
-
+                    geodesics_distance = ensemble_curve_energy(curve, decoders).item()
                 # ---------------------------------------------------------------
                 # Save geodesics + latent data so we can replot without rerunning
                 # ---------------------------------------------------------------
                 torch.save({
                     "geodesics": geodesics,
+                    "geodesics_distance": geodesics_distance,
                     "all_z": all_z,
                     "all_y": all_y,
                     "euclidean_distance": euclidean_distance,
