@@ -96,7 +96,7 @@ class EnsampleVAE(nn.Module):
 
     def sample(self, n_samples=1):
         z = self.prior().sample(torch.Size([n_samples]))
-        return self.decoder(z).sample()
+        return self.decoders(z).sample()
 
     def forward(self, x):
         return -self.elbo(x)
@@ -225,7 +225,7 @@ def ensemble_curve_energy(curve_points, decoders):
             f_l = decoders[decorder_idx_l].decoder_net(curve_points[i].unsqueeze(0))
             f_k = decoders[decorder_idx_k].decoder_net(curve_points[i+1].unsqueeze(0))
             p = (f_l - f_k).view(-1)
-            step_energy += step_energy + (p ** 2).sum()
+            step_energy += (p ** 2).sum()
         energy = energy + step_energy / samples
     return energy
 
@@ -285,39 +285,7 @@ def compute_geodesic(z_start, z_end, decoder_net, n_points=20,
 
 def compute_ensemble_geodesic(z_start, z_end, decoders, n_points=20,
                               lr=1e-2, n_steps=500, device="cpu"):
-    """Compute a geodesic in latent space between z_start and z_end by
-    minimizing the discrete curve energy under the pull-back metric induced by an ensemble of decoders.
-    The energy is averaged over the ensemble of decoders.
-    The endpoints are fixed; only the n_points-2 interior points are optimised.
-    Parameters:
-    z_start: [torch.Tensor]  shape (M,)
-    z_end:   [torch.Tensor]  shape (M,)
-    decoder_nets: [list of torch.nn.Module]  list of decoder networks in the
-                    ensemble
-    n_points: [int]  total number of points on the curve (including endpoints)
-    lr: [float]  learning rate for Adam
-    n_steps: [int]  number of optimisation steps
-    Returns:
-    curve: [torch.Tensor]  shape (n_points, M)  — the optimised curve
-   """
     
-    """
-    Compute a geodesic in latent space between z_start and z_end by
-    minimizing the discrete curve energy under the pull-back metric.
-
-    The endpoints are fixed; only the n_points-2 interior points are optimised.
-
-    Parameters:
-    z_start: [torch.Tensor]  shape (M,)
-    z_end:   [torch.Tensor]  shape (M,)
-    decoder_net: [torch.nn.Module]
-    n_points: [int]  total number of points on the curve (including endpoints)
-    lr: [float]  learning rate for Adam
-    n_steps: [int]  number of optimisation steps
-
-    Returns:
-    curve: [torch.Tensor]  shape (n_points, M)  — the optimised curve
-    """
     M = z_start.shape[0]
 
     # Initialise interior points as a straight line between the endpoints
@@ -350,6 +318,7 @@ def compute_ensemble_geodesic(z_start, z_end, decoders, n_points=20,
 
     return curve.detach()
 
+    
 # ---------------------------------------------------------------------------
 # Plotting helper — separated so we can call it from both geodesics + plot modes
 # ---------------------------------------------------------------------------
@@ -410,13 +379,13 @@ if __name__ == "__main__":
     from torchvision import datasets, transforms
     from torchvision.utils import save_image
     import argparse
-
+    torch.manual_seed(42)
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "mode",
         type=str,
         default="train",
-        choices=["train", "train_b", "sample", "eval", "geodesics", "geodesics_b", "plot"],
+        choices=["train", "train_b", "sample", "eval", "geodesics", "geodesics_b","calculate_CoV", "plot"],
         help="what to do when running the script (default: %(default)s)",
     )
     parser.add_argument("--experiment-folder", type=str, default="experiment_b")
@@ -426,9 +395,9 @@ if __name__ == "__main__":
     parser.add_argument("--batch-size", type=int, default=32, metavar="N")
     parser.add_argument("--epochs-per-decoder", type=int, default=50, metavar="N")
     parser.add_argument("--latent-dim", type=int, default=2, metavar="N")
-    parser.add_argument("--num-decoders", type=int, default=3, metavar="N")
+    parser.add_argument("--num-decoders", type=int, default=1, metavar="N")
     parser.add_argument("--num-reruns", type=int, default=10, metavar="N")
-    parser.add_argument("--num-curves", type=int, default=25, metavar="N",
+    parser.add_argument("--num-curves", type=int, default=1, metavar="N",
                         help="number of geodesics to plot (default: %(default)s)")
     parser.add_argument("--num-t", type=int, default=20, metavar="N",
                         help="number of points along the curve (default: %(default)s)")
@@ -646,13 +615,14 @@ if __name__ == "__main__":
         # ---------------------------------------------------------------
         # Load model
         # ---------------------------------------------------------------
+        æ = 0
         decorders = [GaussianDecoder(new_decoder()) for _ in range(args.num_decoders)]
         model = EnsampleVAE(
             GaussianPrior(M),
             decorders,
             GaussianEncoder(new_encoder()),
         ).to(device)
-        model.load_state_dict(torch.load(args.experiment_folder + "/model_run_3_0.pt",
+        model.load_state_dict(torch.load(f"{args.experiment_folder}/model_run_1_{æ}.pt",
                                          map_location=device))
         model.eval()
         decoders = model.decoders
@@ -704,20 +674,88 @@ if __name__ == "__main__":
             "geodesics": geodesics,
             "all_z": all_z,
             "all_y": all_y,
-        }, f"{args.experiment_folder}/geodesics_data.pt")
-        print(f"Geodesic data saved to {args.experiment_folder}/geodesics_data.pt")
+        }, f"{args.experiment_folder}/geodesics_data_1_{æ}.pt")
+        print(f"Geodesic data saved to {args.experiment_folder}/geodesics_data_1_{æ}.pt")
 
         # ---------------------------------------------------------------
         # Plot: latent space scatter + geodesics
         # ---------------------------------------------------------------
-        _plot_geodesics(
-            geodesics, all_z, all_y,
-            num_classes=num_classes,
-            out_path=f"{args.experiment_folder}/geodesics_partA.png",
-            show_endpoints=True,
-            title="Latent space with pull-back geodesics (Part A)",
-        )
+        #_plot_geodesics(
+        #    geodesics, all_z, all_y,
+        #    num_classes=num_classes,
+        #    out_path=f"{args.experiment_folder}/geodesics_partA.png",
+        #    show_endpoints=True,
+        #    title="Latent space with pull-back geodesics (Part A)",
+        #)
 
+    elif args.mode == "calculate_CoV":
+        for l in range(3):
+            for i in range(10):
+                decorders = [GaussianDecoder(new_decoder()) for _ in range(args.num_decoders)]
+                model = EnsampleVAE(
+                    GaussianPrior(M),
+                    decorders,
+                    GaussianEncoder(new_encoder()),
+                ).to(device)
+                model.load_state_dict(torch.load(f"{args.experiment_folder}/model_run_{l+1}_{i}.pt",
+                                                map_location=device))
+                model.eval()
+                decoders = model.decoders
+
+                # ---------------------------------------------------------------
+                # Encode all test data to get latent means + labels
+                # ---------------------------------------------------------------
+                all_z, all_y = [], []
+                with torch.no_grad():
+                    for x, y in mnist_test_loader:
+                        x = x.to(device)
+                        z_mean = model.encoder(x).mean
+                        all_z.append(z_mean.cpu())
+                        all_y.append(y)
+                all_z = torch.cat(all_z, dim=0)   # (N_test, 2)
+                all_y = torch.cat(all_y, dim=0)   # (N_test,)
+
+                # ---------------------------------------------------------------
+                # Randomly pick pairs of latent points for geodesics
+                # ---------------------------------------------------------------
+                torch.manual_seed(42)
+                n_curves = args.num_curves
+                idx = torch.randperm(len(all_z))[:2 * n_curves]
+                starts = all_z[idx[:n_curves]].to(device)    # (n_curves, 2)
+                ends   = all_z[idx[n_curves:]].to(device)    # (n_curves, 2)
+                
+                # ---------------------------------------------------------------
+                # Compute geodesics
+                # ---------------------------------------------------------------
+                print(f"Computing {n_curves} geodesics "
+                    f"({args.num_t} points, {args.geodesic_steps} steps each)...")
+
+                geodesics = []
+                for i in tqdm(range(n_curves), desc="Geodesics"):
+                    euclidean_distance = torch.norm(starts[i] - ends[i]).item()
+                    curve = compute_ensemble_geodesic(
+                        starts[i], ends[i],
+                        decoders,
+                        n_points=args.num_t,
+                        lr=args.geodesic_lr,
+                        n_steps=args.geodesic_steps,
+                        device=device,
+                    )
+                    geodesics.append(curve.cpu())
+
+                # ---------------------------------------------------------------
+                # Save geodesics + latent data so we can replot without rerunning
+                # ---------------------------------------------------------------
+                torch.save({
+                    "geodesics": geodesics,
+                    "all_z": all_z,
+                    "all_y": all_y,
+                    "euclidean_distance": euclidean_distance,
+                }, f"{args.experiment_folder}/geodesics_data_{l+1}_{i}.pt")
+                print(f"Geodesic data saved to {args.experiment_folder}/geodesics_data_{l+1}_{i}.pt")
+
+            
+                    
 
     elif args.mode == "plot":
         # ---------------------------------------------------------------
