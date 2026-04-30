@@ -80,4 +80,4 @@ print(f"{'Deep Generative Model':<25} | {(novel_count/n)*100:>6.1f}% | {(len(uni
 with open('vae_graphs.pkl', 'wb') as f:
     pickle.dump(vae_generated_graphs, f)
 
-print(f"\nSuccess! Graphs saved to 'vae_graphs.pkl'.")
+print(f"\nGraphs saved to 'vae_graphs.pkl'.")
