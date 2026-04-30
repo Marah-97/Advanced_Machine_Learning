@@ -77,7 +77,7 @@ print("-" * 60)
 print(f"{'Deep Generative Model':<25} | {(novel_count/n)*100:>6.1f}% | {(len(unique_hashes)/n)*100:>6.1f}% | {(novel_unique_count/n)*100:>11.1f}%")
 
 # 6. Save results for the final plot script
-with open('team2_vae_graphs.pkl', 'wb') as f:
+with open('vae_graphs.pkl', 'wb') as f:
     pickle.dump(vae_generated_graphs, f)
 
-print(f"\nSuccess! Graphs saved to 'team2_vae_graphs.pkl'.")
+print(f"\nSuccess! Graphs saved to 'vae_graphs.pkl'.")
